@@ -1,6 +1,6 @@
 {
   "name": "lufs-buff",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Loudness normalization and quality control for Corpus Voces voice clips",
   "type": "module",
   "main": "src/index.js",
