@@ -9,10 +9,11 @@ import {
 import { assertFfmpegAvailable } from './ffmpegUtils.js';
 import {
   PACKAGE_VERSION,
-  appendProcessing,
+  buildStageManifest,
   enrichReportEntry,
   manifestReportContext,
   readManifest,
+  resolveStageManifestPath,
   writeManifest,
 } from './manifestUtils.js';
 import { normalizeAudio } from './normalizeAudio.js';
@@ -26,6 +27,7 @@ import { writeReports } from './writeReports.js';
  * @property {string} [reportFolder]
  * @property {number} [targetLufs]
  * @property {string} [manifestPath]
+ * @property {boolean} [writeSourceManifest]
  * @property {boolean} [dryRun]
  * @property {boolean} [reportOnly]
  * @property {typeof analyzeAudio} [analyzeFn]
@@ -39,6 +41,7 @@ import { writeReports } from './writeReports.js';
  * @property {string[]} failures
  * @property {boolean} dryRun
  * @property {boolean} reportOnly
+ * @property {string | null} stageManifestPath
  */
 
 /**
@@ -55,6 +58,7 @@ export async function processCorpus(options) {
     dryRun = false,
     reportOnly = false,
     manifestPath,
+    writeSourceManifest = false,
     analyzeFn = analyzeAudio,
     normalizeFn = normalizeAudio,
   } = options;
@@ -136,13 +140,27 @@ export async function processCorpus(options) {
     manifestContext: manifest ? manifestReportContext(manifest) : null,
   });
 
-  if (manifest && manifestPath) {
-    const updated = appendProcessing(manifest, 'lufs_buff', {
-      version: PACKAGE_VERSION,
-      target_lufs: targetLufs,
-      completed_at: new Date().toISOString(),
+  let stageManifestPath = null;
+  if (manifest) {
+    const resolvedSourceManifest = manifestPath ? path.resolve(manifestPath) : null;
+    const stageManifest = buildStageManifest({
+      manifest,
+      qcEntries: entries,
+      qcSummary: report.summary,
+      processingData: {
+        version: PACKAGE_VERSION,
+        target_lufs: targetLufs,
+        completed_at: new Date().toISOString(),
+      },
+      sourceManifestPath: resolvedSourceManifest ?? undefined,
     });
-    await writeManifest(path.resolve(manifestPath), updated);
+
+    stageManifestPath = resolveStageManifestPath(reportDir);
+    await writeManifest(stageManifestPath, stageManifest);
+
+    if (writeSourceManifest && resolvedSourceManifest) {
+      await writeManifest(resolvedSourceManifest, stageManifest);
+    }
   }
 
   return {
@@ -151,5 +169,6 @@ export async function processCorpus(options) {
     failures,
     dryRun,
     reportOnly,
+    stageManifestPath,
   };
 }

@@ -42,3 +42,16 @@ test('parseCliArgs rejects unknown options', () => {
 test('parseCliArgs requires input and output folders', () => {
   assert.throws(() => parseCliArgs(['./raw']), /Input and output folders are required/);
 });
+
+test('parseCliArgs supports manifest and write-source-manifest flags', () => {
+  const args = parseCliArgs([
+    './raw',
+    './out',
+    '--manifest',
+    './manifest.json',
+    '--write-source-manifest',
+  ]);
+
+  assert.equal(args.manifestPath, './manifest.json');
+  assert.equal(args.writeSourceManifest, true);
+});

@@ -50,6 +50,18 @@ Report-only with explicit report folder:
 lufs-buff ./raw_clips ./normalized_clips --report-only --report ./reports
 ```
 
+With VoiceClipper manifest (preserves speaker/session/clip metadata):
+
+```bash
+lufs-buff ./raw_clips ./normalized_clips --manifest ./manifest.json
+```
+
+Writes `reports/manifest.lufs-buff.json` by default. To update the source manifest in place:
+
+```bash
+lufs-buff ./raw_clips ./normalized_clips --manifest ./manifest.json --write-source-manifest
+```
+
 ### Expected project layout
 
 ```text
@@ -153,7 +165,7 @@ src/
 └── index.js
 ```
 
-VoiceClipper passes `--manifest` automatically when post-processing is enabled. Reports and the session manifest preserve speaker/session metadata and attach clip content metadata to each clip entry.
+VoiceClipper passes `--manifest` automatically when post-processing is enabled. By default LUFS Buff writes `reports/manifest.lufs-buff.json` and does **not** overwrite the source manifest. Use `--write-source-manifest` to update the source file in place.
 
 ## Next stage
 

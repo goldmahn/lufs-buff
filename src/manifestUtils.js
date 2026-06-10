@@ -9,6 +9,8 @@ const packageJson = JSON.parse(
 );
 
 export const PACKAGE_VERSION = packageJson.version;
+export const STAGE_MANIFEST_FILENAME = 'manifest.lufs-buff.json';
+export const STAGE_KEY = 'lufs_buff';
 
 /**
  * @param {string} manifestPath
@@ -24,7 +26,24 @@ export async function readManifest(manifestPath) {
  * @param {Record<string, unknown>} manifest
  */
 export async function writeManifest(manifestPath, manifest) {
+  await fs.mkdir(path.dirname(manifestPath), { recursive: true });
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+}
+
+/**
+ * @param {Record<string, unknown>} manifest
+ * @returns {Record<string, unknown>}
+ */
+export function cloneManifest(manifest) {
+  return JSON.parse(JSON.stringify(manifest));
+}
+
+/**
+ * @param {string} reportFolder
+ * @returns {string}
+ */
+export function resolveStageManifestPath(reportFolder) {
+  return path.join(reportFolder, STAGE_MANIFEST_FILENAME);
 }
 
 /**
@@ -96,4 +115,101 @@ export function enrichReportEntry(entry, manifest) {
     phrase_text: clipRecord.phrase_text ?? null,
     content_metadata: clipRecord.content_metadata ?? null,
   };
+}
+
+/**
+ * @param {Record<string, unknown>} qcEntry
+ * @returns {Record<string, unknown>}
+ */
+export function pickLufsBuffQcFields(qcEntry) {
+  return {
+    status: qcEntry.status ?? null,
+    notes: qcEntry.notes ?? [],
+    lufs: qcEntry.lufs ?? null,
+    rmsDbfs: qcEntry.rmsDbfs ?? null,
+    peakDbfs: qcEntry.peakDbfs ?? null,
+    truePeakDbfs: qcEntry.truePeakDbfs ?? null,
+    clippingCount: qcEntry.clippingCount ?? null,
+    clippingPercentage: qcEntry.clippingPercentage ?? null,
+    leadingSilenceMs: qcEntry.leadingSilenceMs ?? null,
+    trailingSilenceMs: qcEntry.trailingSilenceMs ?? null,
+    error: qcEntry.error ?? null,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} manifest
+ * @param {Record<string, unknown>[]} qcEntries
+ * @returns {Record<string, unknown>}
+ */
+export function applyClipQc(manifest, qcEntries) {
+  const updated = cloneManifest(manifest);
+  const byFilename = new Map(
+    qcEntries.map((entry) => [String(entry.filename ?? ''), entry])
+  );
+
+  updated.clips = (Array.isArray(updated.clips) ? updated.clips : []).map((clip) => {
+    if (!clip || typeof clip !== 'object') {
+      return clip;
+    }
+
+    const clipRecord = /** @type {Record<string, unknown>} */ (clip);
+    const qcEntry = byFilename.get(String(clipRecord.filename ?? ''));
+    if (!qcEntry) {
+      return clipRecord;
+    }
+
+    const existingQc =
+      clipRecord.qc && typeof clipRecord.qc === 'object'
+        ? /** @type {Record<string, unknown>} */ (clipRecord.qc)
+        : {};
+
+    return {
+      ...clipRecord,
+      qc: {
+        ...existingQc,
+        [STAGE_KEY]: pickLufsBuffQcFields(qcEntry),
+      },
+    };
+  });
+
+  return updated;
+}
+
+/**
+ * @param {Object} options
+ * @param {Record<string, unknown>} options.manifest
+ * @param {Record<string, unknown>[]} options.qcEntries
+ * @param {Record<string, number>} options.qcSummary
+ * @param {Record<string, unknown>} options.processingData
+ * @param {string} [options.sourceManifestPath]
+ * @returns {Record<string, unknown>}
+ */
+export function buildStageManifest({
+  manifest,
+  qcEntries,
+  qcSummary,
+  processingData,
+  sourceManifestPath,
+}) {
+  let updated = applyClipQc(manifest, qcEntries);
+  updated = appendProcessing(updated, STAGE_KEY, processingData);
+  updated.qc_summary = {
+    ...(updated.qc_summary && typeof updated.qc_summary === 'object'
+      ? /** @type {Record<string, unknown>} */ (updated.qc_summary)
+      : {}),
+    [STAGE_KEY]: qcSummary,
+  };
+
+  if (sourceManifestPath) {
+    updated.lineage = {
+      ...(updated.lineage && typeof updated.lineage === 'object'
+        ? /** @type {Record<string, unknown>} */ (updated.lineage)
+        : {}),
+      source_manifest: sourceManifestPath,
+      stage_manifest: STAGE_MANIFEST_FILENAME,
+    };
+  }
+
+  return updated;
 }

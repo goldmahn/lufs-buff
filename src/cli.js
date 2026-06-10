@@ -17,6 +17,7 @@ Options:
   --dry-run           Analyze and report without writing normalized files
   --report-only       Analyze and report only (alias for dry-run semantics)
   --manifest <path>   VoiceClipper manifest.json to preserve and extend
+  --write-source-manifest  Also update the source manifest file in place
   --help, -h          Show this help message
 
 Examples:
@@ -37,6 +38,7 @@ export function parseCliArgs(argv) {
   let dryRun = false;
   let reportOnly = false;
   let manifestPath;
+  let writeSourceManifest = false;
   let help = false;
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -90,6 +92,11 @@ export function parseCliArgs(argv) {
       continue;
     }
 
+    if (arg === '--write-source-manifest') {
+      writeSourceManifest = true;
+      continue;
+    }
+
     if (arg.startsWith('-')) {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -117,6 +124,7 @@ export function parseCliArgs(argv) {
     dryRun: dryRun || reportOnly,
     reportOnly,
     manifestPath,
+    writeSourceManifest,
   };
 }
 
