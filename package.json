@@ -1,0 +1,29 @@
+{
+  "name": "lufs-buff",
+  "version": "1.0.0",
+  "description": "Loudness normalization and quality control for Corpus Voces voice clips",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "lufs-buff": "src/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "start": "node src/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "audio",
+    "lufs",
+    "loudness",
+    "corpus-voces",
+    "voice",
+    "qc"
+  ],
+  "license": "MIT"
+}
