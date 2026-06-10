@@ -21,5 +21,13 @@ export {
   assertFfmpegAvailable,
   FfmpegNotFoundError,
 } from './ffmpegUtils.js';
+export {
+  readManifest,
+  writeManifest,
+  appendProcessing,
+  manifestReportContext,
+  enrichReportEntry,
+  PACKAGE_VERSION,
+} from './manifestUtils.js';
 export { processCorpus } from './processCorpus.js';
 export { parseCliArgs } from './cli.js';

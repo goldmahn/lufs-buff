@@ -7,6 +7,14 @@ import {
   ensureFolder,
 } from './fileUtils.js';
 import { assertFfmpegAvailable } from './ffmpegUtils.js';
+import {
+  PACKAGE_VERSION,
+  appendProcessing,
+  enrichReportEntry,
+  manifestReportContext,
+  readManifest,
+  writeManifest,
+} from './manifestUtils.js';
 import { normalizeAudio } from './normalizeAudio.js';
 import { buildReportEntry, classifyClip } from './qcRules.js';
 import { writeReports } from './writeReports.js';
@@ -17,6 +25,7 @@ import { writeReports } from './writeReports.js';
  * @property {string} outputFolder
  * @property {string} [reportFolder]
  * @property {number} [targetLufs]
+ * @property {string} [manifestPath]
  * @property {boolean} [dryRun]
  * @property {boolean} [reportOnly]
  * @property {typeof analyzeAudio} [analyzeFn]
@@ -45,6 +54,7 @@ export async function processCorpus(options) {
     targetLufs = DEFAULTS.targetLufs,
     dryRun = false,
     reportOnly = false,
+    manifestPath,
     analyzeFn = analyzeAudio,
     normalizeFn = normalizeAudio,
   } = options;
@@ -54,6 +64,11 @@ export async function processCorpus(options) {
   const inputDir = path.resolve(inputFolder);
   const outputDir = path.resolve(outputFolder);
   const reportDir = path.resolve(reportFolder);
+
+  let manifest = null;
+  if (manifestPath) {
+    manifest = await readManifest(path.resolve(manifestPath));
+  }
 
   const wavFiles = await discoverWavFiles(inputDir);
   const failures = [];
@@ -71,7 +86,7 @@ export async function processCorpus(options) {
       const analysis = await analyzeFn(filePath);
       const qc = classifyClip(analysis);
       const entry = buildReportEntry(analysis, qc);
-      entries.push(entry);
+      entries.push(manifest ? enrichReportEntry(entry, manifest) : entry);
 
       if (reportOnly || dryRun || !analysis.valid) {
         continue;
@@ -118,7 +133,17 @@ export async function processCorpus(options) {
     reportFolder: reportDir,
     targetLufs,
     entries,
+    manifestContext: manifest ? manifestReportContext(manifest) : null,
   });
+
+  if (manifest && manifestPath) {
+    const updated = appendProcessing(manifest, 'lufs_buff', {
+      version: PACKAGE_VERSION,
+      target_lufs: targetLufs,
+      completed_at: new Date().toISOString(),
+    });
+    await writeManifest(path.resolve(manifestPath), updated);
+  }
 
   return {
     clips: entries,

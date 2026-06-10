@@ -34,7 +34,7 @@ const CSV_COLUMNS = [
  * @param {Record<string, unknown>[]} entries
  * @returns {Promise<CorpusReport>}
  */
-export async function writeReports({ reportFolder, targetLufs, entries }) {
+export async function writeReports({ reportFolder, targetLufs, entries, manifestContext = null }) {
   await fs.mkdir(reportFolder, { recursive: true });
 
   const report = {
@@ -42,6 +42,7 @@ export async function writeReports({ reportFolder, targetLufs, entries }) {
     targetLufs,
     summary: summarizeEntries(entries),
     clips: entries,
+    ...(manifestContext ?? {}),
   };
 
   const jsonPath = path.join(reportFolder, 'qc-report.json');

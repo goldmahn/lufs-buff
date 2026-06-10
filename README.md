@@ -153,7 +153,7 @@ src/
 └── index.js
 ```
 
-`processCorpus` is the primary orchestration entry point for downstream Corpus Voces stages.
+VoiceClipper passes `--manifest` automatically when post-processing is enabled. Reports and the session manifest preserve speaker/session metadata and attach clip content metadata to each clip entry.
 
 ## Next stage
 

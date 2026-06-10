@@ -16,6 +16,7 @@ Options:
   --report <folder>   Report output folder (default: ../reports relative to output)
   --dry-run           Analyze and report without writing normalized files
   --report-only       Analyze and report only (alias for dry-run semantics)
+  --manifest <path>   VoiceClipper manifest.json to preserve and extend
   --help, -h          Show this help message
 
 Examples:
@@ -35,6 +36,7 @@ export function parseCliArgs(argv) {
   let reportFolder;
   let dryRun = false;
   let reportOnly = false;
+  let manifestPath;
   let help = false;
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -78,6 +80,16 @@ export function parseCliArgs(argv) {
       continue;
     }
 
+    if (arg === '--manifest') {
+      const value = argv[i + 1];
+      if (value === undefined) {
+        throw new Error('Missing value for --manifest');
+      }
+      manifestPath = value;
+      i += 1;
+      continue;
+    }
+
     if (arg.startsWith('-')) {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -104,6 +116,7 @@ export function parseCliArgs(argv) {
     targetLufs,
     dryRun: dryRun || reportOnly,
     reportOnly,
+    manifestPath,
   };
 }
 
